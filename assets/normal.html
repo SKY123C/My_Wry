@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WRY 示例</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, #111827, #1e3a5f);
+        color: #f8fafc;
+      }
+      main {
+        width: min(560px, calc(100% - 64px));
+        padding: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 20px;
+        background: rgba(15, 23, 42, 0.78);
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.35);
+      }
+      h1 { margin-top: 0; font-size: 2.4rem; }
+      p { color: #cbd5e1; line-height: 1.7; }
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 24px;
+      }
+      button {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        width: 100%;
+        padding: 13px 16px;
+        border: 1px solid rgba(125, 211, 252, 0.18);
+        border-radius: 12px;
+        background: linear-gradient(90deg, rgba(14, 165, 233, 0.14), rgba(56, 189, 248, 0.04));
+        color: #e0f2fe;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+      }
+      button:hover {
+        transform: translateX(6px);
+        border-color: rgba(125, 211, 252, 0.65);
+        background: linear-gradient(90deg, rgba(14, 165, 233, 0.3), rgba(56, 189, 248, 0.1));
+      }
+      button:active { transform: translateX(3px) scale(0.99); }
+      .number {
+        display: grid;
+        flex: 0 0 32px;
+        height: 32px;
+        place-items: center;
+        border-radius: 9px;
+        background: #38bdf8;
+        color: #082f49;
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+      .label { flex: 1; font-weight: 650; }
+      .arrow { color: #7dd3fc; font-size: 1.15rem; }
+      #status { min-height: 1.5em; color: #7dd3fc; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>你好，WRY 👋</h1>
+      <p>这是由 Rust 创建的原生窗口，界面由系统 WebView 渲染。</p>
+      <p id="runtime"></p>
+      <div class="actions">
+        <button data-action="create_project"><span class="number">01</span><span class="label">新建项目</span><span class="arrow">›</span></button>
+        <button data-action="open_file"><span class="number">02</span><span class="label">打开文件</span><span class="arrow">›</span></button>
+        <button data-action="save_content"><span class="number">03</span><span class="label">保存内容</span><span class="arrow">›</span></button>
+        <button data-action="import_data"><span class="number">04</span><span class="label">导入数据</span><span class="arrow">›</span></button>
+        <button data-action="export_result"><span class="number">05</span><span class="label">导出结果</span><span class="arrow">›</span></button>
+        <button data-action="refresh_page"><span class="number">06</span><span class="label">刷新页面</span><span class="arrow">›</span></button>
+        <button data-action="view_logs"><span class="number">07</span><span class="label">查看日志</span><span class="arrow">›</span></button>
+        <button data-action="settings"><span class="number">08</span><span class="label">系统设置</span><span class="arrow">›</span></button>
+        <button data-action="help"><span class="number">09</span><span class="label">帮助中心</span><span class="arrow">›</span></button>
+        <button data-action="exit_application"><span class="number">10</span><span class="label">退出应用</span><span class="arrow">›</span></button>
+      </div>
+      <p id="status"></p>
+    </main>
+    <script>
+      document.querySelector('#runtime').textContent = window.runtimeMessage;
+      document.querySelector('.actions').addEventListener('click', (event) => {
+        const button = event.target.closest('button');
+        if (!button) return;
+
+        const action = button.dataset.action;
+        const label = button.querySelector('.label').textContent;
+        window.ipc.postMessage(JSON.stringify({
+          action,
+          element_id: button.id || null,
+          value: button.value || null,
+          data: {
+            label,
+            number: button.querySelector('.number').textContent
+          }
+        }));
+        document.querySelector('#status').textContent = `已触发「${label}」事件。`;
+      });
+    </script>
+  </body>
+</html>
