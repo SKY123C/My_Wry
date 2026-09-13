@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MyWryAPP · 进度推送示例</title>
+    <style>
+      :root { font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        min-height: 100vh; margin: 0; display: grid; place-items: center;
+        background: radial-gradient(circle at 20% 15%, #283870, transparent 42%),
+                    linear-gradient(135deg, #111827, #0c1226);
+        color: #f4f6ff;
+      }
+      main {
+        width: min(480px, calc(100vw - 48px)); padding: 40px;
+        border: 1px solid #53608d80; border-radius: 24px;
+        background: #202a48c9; box-shadow: 0 25px 70px #0007;
+      }
+      .eyebrow { color: #9eb2ff; letter-spacing: .2em; font-size: 12px; text-transform: uppercase; }
+      h1 { margin: 12px 0; font-size: 28px; }
+      p { color: #bac6e7; line-height: 1.65; }
+      .row { display: flex; justify-content: space-between; margin: 28px 0 8px; }
+      #percent { font-variant-numeric: tabular-nums; font-weight: 700; }
+      progress { width: 100%; height: 18px; accent-color: #8c95ff; }
+      button {
+        width: 100%; margin-top: 28px; padding: 14px 20px; border: 0;
+        border-radius: 12px; color: white; background: linear-gradient(90deg, #458ce8, #8c65ef);
+        font: inherit; font-weight: 700; cursor: pointer;
+      }
+      button:disabled { opacity: .55; cursor: wait; }
+      #status { min-height: 25px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Python → Rust → WebView</div>
+      <h1>持续推送进度</h1>
+      <p>点击开始后，Python 后台线程每 200 毫秒推送一次进度。页面不轮询，也不需要 HTTP 服务。</p>
+      <div class="row"><span>任务进度</span><span id="percent">0%</span></div>
+      <progress id="progress" max="100" value="0"></progress>
+      <p id="status" role="status">等待开始</p>
+      <button id="start" type="button">开始任务</button>
+    </main>
+
+    <script type="module">
+      import { invokePython, onPythonEvent } from "./python_bridge.js";
+
+      const start = document.querySelector("#start");
+      const progress = document.querySelector("#progress");
+      const percentText = document.querySelector("#percent");
+      const status = document.querySelector("#status");
+      let unsubscribe = null;
+
+      start.addEventListener("click", async () => {
+        unsubscribe?.();
+        const taskId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`;
+        progress.value = 0;
+        percentText.textContent = "0%";
+        status.textContent = "任务已启动，等待 Python 推送…";
+        start.disabled = true;
+
+        // Subscribe before invoking Python so the first progress event is not lost.
+        unsubscribe = onPythonEvent("task.progress", (message) => {
+          if (message.task_id !== taskId) return;
+          progress.value = message.percent;
+          percentText.textContent = `${message.percent}%`;
+          status.textContent = message.done ? "任务完成！" : "Python 正在处理…";
+          if (message.done) {
+            unsubscribe?.();
+            unsubscribe = null;
+            start.disabled = false;
+          }
+        });
+
+        try {
+          await invokePython("start_task", { task_id: taskId });
+        } catch (error) {
+          unsubscribe?.();
+          unsubscribe = null;
+          status.textContent = `启动失败：${error.message}`;
+          start.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

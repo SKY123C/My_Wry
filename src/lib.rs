@@ -7,7 +7,10 @@ use std::{
     sync::{Arc, LazyLock},
 };
 
-use pyo3::{exceptions::PyRuntimeError, prelude::*};
+use pyo3::{
+    exceptions::{PyRuntimeError, PyValueError},
+    prelude::*,
+};
 
 #[pyclass(eq, eq_int, from_py_object, module = "my_wry")]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -121,6 +124,24 @@ impl MyWryApp {
     #[pyo3(text_signature = "($self, action)")]
     fn emit(&self, action: String) -> PyResult<()> {
         middleware::emit(&self.native.context, action)
+    }
+
+    #[pyo3(text_signature = "($self, event_name, data)")]
+    fn publish(&self, py: Python<'_>, event_name: String, data: Py<PyAny>) -> PyResult<()> {
+        let event_name = event_name.trim();
+        if event_name.is_empty() {
+            return Err(PyValueError::new_err("event_name 不能为空"));
+        }
+        if !app::is_running(&self.native.state).map_err(PyRuntimeError::new_err)? {
+            return Err(PyRuntimeError::new_err("这个 MyWryAPP 实例尚未运行"));
+        }
+        let serialized: String = PyModule::import(py, "json")?
+            .call_method1("dumps", (data.bind(py),))?
+            .extract()?;
+        let value: serde_json::Value = serde_json::from_str(&serialized)
+            .map_err(|error| PyValueError::new_err(format!("推送数据不是有效的 JSON：{error}")))?;
+        app::publish(self.native.id, event_name.to_owned(), value.to_string())
+            .map_err(PyRuntimeError::new_err)
     }
 
     #[pyo3(text_signature = "($self)")]

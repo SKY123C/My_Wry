@@ -70,6 +70,11 @@ enum RuntimeEvent {
         result_json: Option<String>,
         error: Option<String>,
     },
+    PythonPush {
+        app_id: u64,
+        event_name: String,
+        data_json: String,
+    },
 }
 
 #[derive(Default)]
@@ -256,6 +261,22 @@ pub fn send_python_response(
         .map_err(|_| "无法将 Python 返回值发送到 WRY 线程".to_owned())
 }
 
+pub fn publish(app_id: u64, event_name: String, data_json: String) -> Result<(), String> {
+    let proxy = RUNTIME
+        .lock()
+        .map_err(|_| "无法锁定 WRY 运行时状态".to_owned())?
+        .proxy
+        .clone()
+        .ok_or_else(|| "WRY 运行时尚未运行".to_owned())?;
+    proxy
+        .send_event(RuntimeEvent::PythonPush {
+            app_id,
+            event_name,
+            data_json,
+        })
+        .map_err(|_| "无法将 Python 推送消息发送到 WRY 线程".to_owned())
+}
+
 fn run_managed() {
     let result = panic::catch_unwind(AssertUnwindSafe(run_event_loop))
         .unwrap_or_else(|payload| Err(format!("WRY 线程发生异常：{}", panic_text(&payload))));
@@ -371,6 +392,22 @@ fn run_event_loop() -> Result<(), String> {
                     );
                     if let Err(error) = entry.webview.evaluate_script(&script) {
                         eprintln!("向页面返回 Python 执行结果失败：{error}");
+                    }
+                }
+            }
+            Event::UserEvent(RuntimeEvent::PythonPush {
+                app_id,
+                event_name,
+                data_json,
+            }) => {
+                if let Some(entry) = windows.get(&app_id) {
+                    let event_name_json =
+                        serde_json::to_string(&event_name).expect("序列化事件名称不应失败");
+                    let script = format!(
+                        "globalThis.__receivePythonEvent?.({event_name_json}, {data_json});"
+                    );
+                    if let Err(error) = entry.webview.evaluate_script(&script) {
+                        eprintln!("向页面推送 Python 事件失败：{error}");
                     }
                 }
             }

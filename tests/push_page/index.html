@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>Python push integration test</title></head>
+  <body>
+    <script>
+      globalThis.__receivePythonEvent = (eventName, data) => {
+        globalThis.ipc.postMessage(JSON.stringify({
+          action: "push_ack",
+          data: { event_name: eventName, percent: data.percent },
+        }));
+      };
+    </script>
+  </body>
+</html>
