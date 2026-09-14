@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ATLAS / Content Browser</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <div class="mark">A<span>✦</span></div>
+      <div class="rail-label">WORKSPACE</div>
+      <button class="rail-icon active" title="内容浏览器">▦</button>
+      <button class="rail-icon" title="刷新" id="rail-refresh">↻</button>
+      <div class="rail-bottom">UE<br><small>LIVE</small></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="brand"><span class="brand-kicker">CREATIVE OS / ASSET SYSTEM</span><strong>ATLAS <em>CONTENT</em></strong></div>
+        <div class="top-right"><span class="live-dot"></span><span id="project-name">CONNECTING TO UNREAL</span><span class="version">v 01.0</span></div>
+      </header>
+      <div class="body">
+        <aside class="sidebar">
+          <div class="side-head"><span>EXPLORER</span><button id="folder-add" title="新建目录">＋</button></div>
+          <button class="root-folder" id="root-folder"><span>⌂</span> Content <small>/Game</small></button>
+          <div id="folder-tree" class="folder-tree"></div>
+          <div class="sidebar-note"><span>◈</span><p>YOUR CREATIVE<br>UNIVERSE STARTS HERE.</p></div>
+        </aside>
+        <main class="main">
+          <div class="hero"><div><p class="eyebrow">UNREAL ENGINE / CONTENT LIBRARY</p><h1>Content<span> Browser.</span></h1><p class="hero-sub">Explore, select and create your world.</p></div><div class="hero-orbit"><span>✦</span></div></div>
+          <div class="toolbar"><div class="crumb" id="breadcrumb"></div><div class="tools"><label class="search"><span>⌕</span><input id="search" placeholder="Search assets..."></label><button class="icon-button" id="refresh" title="刷新">↻</button><button class="create-button" id="create">＋ &nbsp; Create Asset</button></div></div>
+          <div class="section-title"><div><span class="section-bar"></span><h2 id="section-heading">All Assets</h2><span class="count" id="asset-count">0 items</span></div><span class="section-hint">DOUBLE CLICK TO SYNC IN UNREAL</span></div>
+          <div id="grid" class="grid"></div>
+          <div id="empty" class="empty" hidden><div>✧</div><h3>Nothing here yet</h3><p>Try another search or create your first asset.</p></div>
+        </main>
+        <aside class="inspector"><div class="inspector-head">INSPECTOR <span>↗</span></div><div id="inspector-content"><div class="inspector-placeholder"><div>◇</div><p>SELECT AN ASSET</p><small>Asset details will appear here.</small></div></div></aside>
+      </div>
+      <footer class="status"><span><i class="live-dot"></i> REMOTE CONTROL CONNECTED</span><span id="status-text">READY</span><span>ATLAS / UE</span></footer>
+    </div>
+  </div>
+  <div class="modal-backdrop" id="modal" hidden><form class="modal" id="create-form"><button type="button" id="modal-close" class="modal-close">×</button><p class="eyebrow">NEW / CONTENT</p><h2>Create something<span> new.</span></h2><label>TYPE<select id="create-kind"><option value="material">Material</option><option value="blueprint">Actor Blueprint</option><option value="folder">Folder</option></select></label><label>NAME<input id="create-name" autocomplete="off" placeholder="My_New_Asset" required pattern="[A-Za-z_][A-Za-z0-9_]*"></label><p class="modal-location" id="create-location"></p><button class="create-button modal-submit" type="submit">Create in Unreal →</button></form></div>
+  <div class="toast" id="toast" hidden></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

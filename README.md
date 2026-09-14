@@ -39,6 +39,8 @@ app.stop()
 app.wait()
 ```
 
+在 DCC 或游戏引擎的 Python 环境中，宿主本身会继续运行。获取已有的 `app`、注册回调后直接调用 `app.start()` 即可；不要在启动脚本中调用 `wait()` 或轮询 `is_running()`，否则会阻塞宿主脚本。只有独立运行、需要由 Python 进程维持窗口生命周期的脚本才需要等待。宿主退出并销毁 Python 解释器前，仍须执行下文的清理步骤。
+
 每个实例都有独立的页面配置、运行状态、事件队列和 Python 回调注册表。多个实例共享同一个 Tao/WRY 事件循环线程，因此同一进程可以同时打开多个窗口，同名 action 也不会串线。多次调用同一实例的 `stop()` 是安全的。
 
 `hide()` 只隐藏窗口，WebView 和回调仍然运行；`show()` 会重新显示窗口并获取焦点。可以用 `@app.exit` 接管原生窗口的关闭按钮：
@@ -51,7 +53,7 @@ def on_exit(_event: my_wry.Event) -> None:
 
 注册 `@app.exit` 后，关闭按钮不会自动销毁窗口。回调在 Python 主线程执行，可以调用 `app.hide()` 实现最小化到后台，也可以调用 `app.stop()` 真正退出。没有注册退出回调时，关闭按钮保持默认退出行为。
 
-`start()` 必须传入页面模式：
+创建 `MyWryAPP` 时必须传入页面模式：
 
 - `my_wry.Mode.Test`：测试模式，背景图铺满 WebView 内容区域，只显示一个 `data-action="test"` 按钮；
 - `my_wry.Mode.normal`：普通模式，从 `resource_root/index.html` 加载页面及资源。
@@ -69,6 +71,14 @@ app.start()
 ```
 
 资源根目录的 `index.html` 映射到 `wry://localhost/`，HTML 中的相对 JS、CSS、图片、字体和 WASM 路径会从同一目录读取。无扩展名的缺失路径会回退到 `index.html`，可用于 React Router 或 Vue Router。Normal 模式省略 `resource_root` 或找不到 `index.html` 时，`start()` 会直接抛出异常。
+
+## Unreal Content Browser 页面
+
+在 UE 中启用 **Python Editor Script Plugin**、**Editor Scripting Utilities** 和 **Remote Control API**，并启动 Remote Control HTTP Server（默认端口 `30010`）。先构建 `dist/my_wry.pyd`，然后在 Unreal Editor 的 Python 控制台执行 `C:/data/my_wry/examples/UE/run.py`。脚本直接调用 `app.start()`，不会阻塞编辑器。
+
+页面和脚本都位于 `examples/UE/`：左侧从 Asset Registry 获取 `/Game` 的完整目录树，可逐级展开或收起；主区域浏览当前目录、搜索、查看 UE Remote Control API 返回的资产缩略图，双击资产将其同步选中到 UE Content Browser，并通过 Python 新建 Material、Actor Blueprint 或目录。缩略图由页面直接请求 UE 的 `PUT /remote/object/thumbnail`，避免在 UE Python 主线程中同步请求自身；目录、列表、选择和创建走 `my_wry` 的 Python 回调。当前只显示每个目录前 500 个资产，并为前 80 个可见资产请求缩略图。
+
+关闭 UE 或销毁 Python 解释器前，请调用 `app.stop()`、`app.wait()`，再视需要调用 `app.clear_handlers()`。如果缩略图无法加载，先检查 `http://127.0.0.1:30010/remote/info` 是否可访问。
 
 ## 注册按钮事件
 

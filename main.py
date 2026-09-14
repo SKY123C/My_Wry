@@ -1,16 +1,24 @@
 import sys
 
 sys.path.append(r"C:\data\my_wry\dist")
+import threading
 import time
 
-from application import app
-from test import test as _test
+import my_wry
+
+app = my_wry.MyWryAPP(my_wry.Mode.Test)
+
+@my_wry.on("test")
+def test(event: my_wry.Event) -> dict[str, object]:
+    assert threading.current_thread() is threading.main_thread()
+    print("Python 主线程执行", event.action, event.data)
+    return {"success": True, "message": "测试完成"}
 
 
-app.start()
+my_wry.start(my_wry.Mode.Test)
 
-while app.is_running():
+while my_wry.is_running():
     time.sleep(0.05)
 
-app.wait()
-app.clear_handlers()
+my_wry.wait()
+my_wry.clear_handlers()
