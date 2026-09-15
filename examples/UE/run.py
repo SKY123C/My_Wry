@@ -5,6 +5,7 @@ import re
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Optional
 
 ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parents[1]
@@ -13,6 +14,7 @@ import my_wry
 
 app = my_wry.MyWryAPP(my_wry.Mode.normal, resource_root=ROOT)
 _NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_slate_tick_handle: Optional[object] = None
 
 
 def _unreal() -> ModuleType:
@@ -133,4 +135,43 @@ def create_folder(event: my_wry.Event) -> dict[str, object]:
     return {"path": path}
 
 
-app.start()
+def _poll_wry_events(_delta_seconds: float) -> None:
+    """Drive CPython pending calls from UE's main-thread Slate tick."""
+    app.poll()
+
+
+def _unregister_slate_tick() -> None:
+    global _slate_tick_handle
+    if _slate_tick_handle is not None:
+        _unreal().unregister_slate_post_tick_callback(_slate_tick_handle)
+        _slate_tick_handle = None
+
+
+@app.exit
+def close_app(_event: my_wry.Event) -> None:
+    """Stop polling and close the WRY window when its close button is pressed."""
+    _unregister_slate_tick()
+    app.stop()
+
+
+def start() -> None:
+    """Register the UE main-thread pump and start the non-blocking WRY window."""
+    global _slate_tick_handle
+    if _slate_tick_handle is None:
+        _slate_tick_handle = _unreal().register_slate_post_tick_callback(
+            _poll_wry_events
+        )
+    try:
+        app.start()
+    except Exception:
+        _unregister_slate_tick()
+        raise
+
+
+def stop() -> None:
+    """Stop the WRY window and unregister its UE Slate callback."""
+    _unregister_slate_tick()
+    app.stop()
+
+
+start()

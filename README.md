@@ -74,11 +74,11 @@ app.start()
 
 ## Unreal Content Browser 页面
 
-在 UE 中启用 **Python Editor Script Plugin**、**Editor Scripting Utilities** 和 **Remote Control API**，并启动 Remote Control HTTP Server（默认端口 `30010`）。先构建 `dist/my_wry.pyd`，然后在 Unreal Editor 的 Python 控制台执行 `C:/data/my_wry/examples/UE/run.py`。脚本直接调用 `app.start()`，不会阻塞编辑器。
+在 UE 中启用 **Python Editor Script Plugin**、**Editor Scripting Utilities** 和 **Remote Control API**，并启动 Remote Control HTTP Server（默认端口 `30010`）。先构建 `dist/my_wry.pyd`，然后在 Unreal Editor 的 Python 控制台执行 `C:/data/my_wry/examples/UE/run.py`。脚本通过 Slate post-tick 在 UE 主线程调用 `app.poll()`，并调用非阻塞的 `app.start()` 创建窗口。
 
 页面和脚本都位于 `examples/UE/`：左侧从 Asset Registry 获取 `/Game` 的完整目录树，可逐级展开或收起；主区域浏览当前目录、搜索、查看 UE Remote Control API 返回的资产缩略图，双击资产将其同步选中到 UE Content Browser，并通过 Python 新建 Material、Actor Blueprint 或目录。缩略图由页面直接请求 UE 的 `PUT /remote/object/thumbnail`，避免在 UE Python 主线程中同步请求自身；目录、列表、选择和创建走 `my_wry` 的 Python 回调。当前只显示每个目录前 500 个资产，并为前 80 个可见资产请求缩略图。
 
-关闭 UE 或销毁 Python 解释器前，请调用 `app.stop()`、`app.wait()`，再视需要调用 `app.clear_handlers()`。如果缩略图无法加载，先检查 `http://127.0.0.1:30010/remote/info` 是否可访问。
+`Py_AddPendingCall()` 只负责把回调加入 CPython 队列，嵌入式宿主不一定会在空闲时主动消费。UE 案例的 Slate 回调每帧调用 `app.poll()`，显式执行 `Py_MakePendingCalls()`，从而保证网页事件及时在 UE/Python 主线程运行。关闭窗口时案例会注销 Slate 回调；从控制台主动关闭时调用案例中的 `stop()`。关闭 UE 或销毁 Python 解释器前，请再调用 `app.wait()`，并视需要调用 `app.clear_handlers()`。如果缩略图无法加载，先检查 `http://127.0.0.1:30010/remote/info` 是否可访问。
 
 ## 注册按钮事件
 
@@ -194,9 +194,3 @@ def start_task(event: my_wry.Event) -> dict[str, object]:
 ```
 
 `publish()` 是单条消息推送，不等待页面确认；窗口关闭或页面刷新时未处理的消息不会重放。高频进度更新应在 Python 侧限流，例如仅在百分比变化时发送。`disposePythonBridge()` 会清理所有事件监听器。
-
-## 本次更新
-
-- 增加 `MyWryAPP.publish()`：Python 可向所属 WebView 连续推送 JSON 事件。
-- 增加 `python_bridge.js` 的 `onPythonEvent()` 订阅接口和取消订阅函数，原有 `invokePython()` 不受影响。
-- 新增 `examples/progress/` 进度条案例与 `examples/test_mode/` 热重载案例；根目录不再保留 `test.py`、`test2.py`。

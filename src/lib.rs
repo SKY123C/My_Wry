@@ -111,6 +111,11 @@ impl MyWryApp {
             .map_err(PyRuntimeError::new_err)
     }
 
+    #[pyo3(text_signature = "($self)")]
+    fn poll(&self, py: Python<'_>) -> PyResult<()> {
+        middleware::poll(py)
+    }
+
     #[pyo3(text_signature = "($self, action)")]
     fn on(&self, action: String) -> PyResult<middleware::ActionDecorator> {
         middleware::decorator(Arc::clone(&self.native.context), action)

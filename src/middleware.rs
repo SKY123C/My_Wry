@@ -173,6 +173,17 @@ pub fn emit(context: &Arc<Context>, action: String) -> PyResult<()> {
     .map_err(PyRuntimeError::new_err)
 }
 
+pub fn poll(py: Python<'_>) -> PyResult<()> {
+    // SAFETY: Python 从主线程调用这个函数并持有 GIL；Py_MakePendingCalls 会处理
+    // Py_AddPendingCall 提交到当前主解释器的待处理回调。
+    let result = unsafe { pyo3::ffi::Py_MakePendingCalls() };
+    if result == 0 {
+        Ok(())
+    } else {
+        Err(PyErr::fetch(py))
+    }
+}
+
 pub fn enqueue_action(context: &Arc<Context>, action: &str) -> Result<(), String> {
     enqueue_event(
         context,
